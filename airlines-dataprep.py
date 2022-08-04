@@ -1,5 +1,7 @@
 # Databricks notebook source
 current_user = dbutils.notebook.entry_point.getDbutils().notebook().getContext().tags().apply('user')
+#catalog = "hive_metastore"
+catalog = "matthieu_lamairesse"
 database = "flights_db"
 print(current_user)
 
@@ -28,10 +30,9 @@ dbutils.fs.mv( "file:"+path, "dbfs:/Users/"+current_user+"/airlines_data/" , rec
 
 # COMMAND ----------
 
-spark.sql('''
-  CREATE DATABASE IF NOT EXISTS {database}
-  LOCATION "dbfs:/Users/{user}/flights_db"
-'''.format(user=current_user, database=database ))
+#spark.sql('''use catalog {catalog}'''.format(catalog=catalog))
+spark.sql('''CREATE DATABASE IF NOT EXISTS {database}'''.format( database=database ))
+spark.sql('''use {database}'''.format( database=database ))
 
 
 # COMMAND ----------
@@ -73,16 +74,30 @@ initial_df = (spark.read
       .csv("dbfs:/databricks-datasets/airlines/part-00000"))
 df_schema = initial_df.schema
 
-#remaining_df = (spark.read
-#      .option("header", "false")
-#     .option("nullValue", "NA") \
-#      .schema(df_schema)
-#      .csv("dbfs:/databricks-datasets/airlines/part-000{0[1-9],[1-9][0-9]}"))
+remaining_df = (spark.read
+     .option("header", "false")
+    .option("nullValue", "NA") \
+     .schema(df_schema)
+     .csv("dbfs:/databricks-datasets/airlines/part-000{0[1-9],[1-9][0-9]}"))
 
-#df = initial_df.union(remaining_df)
-#df.createOrReplaceTempView("flights")
+df = initial_df.union(remaining_df)
+df.createOrReplaceTempView("flights")
 
 display(initial_df)
+
+# COMMAND ----------
+
+# MAGIC %sql 
+# MAGIC DROP TABLE flights_db.flights ; 
+
+# COMMAND ----------
+
+df.write \
+  .format("delta") \
+  .mode("overwrite") \
+  .option("overwriteSchema", "true") \
+  .partitionBy("year") \
+  .saveAsTable(database+".FLIGHTS")
 
 # COMMAND ----------
 
@@ -97,12 +112,26 @@ display(initial_df)
 
 # delayUDF = udf(delay, IntegerType())
 
-df_filtered = df.filter("year =< 2008")
-df_filtered = df_filtered.withColumn("ArrDelay",df.ArrDelay.cast('integer')) \
-                         .withColumn("DepDelay",df.DepDelay.cast('integer')) \
-                         .withColumn("Distance",df.Distance.cast('integer'))
+# df_filtered = df.filter("year =< 2008")
+# df_filtered = df_filtered.withColumn("ArrDelay",df.ArrDelay.cast('integer')) \
+#                          .withColumn("DepDelay",df.DepDelay.cast('integer')) \
+#                          .withColumn("Distance",df.Distance.cast('integer'))
 
-display(df_filtered)
+# display(df_filtered)
+
+# COMMAND ----------
+
+# spark.sql('''
+#               CREATE TABLE IF NOT EXISTS {database}.FLIGHT_GOLD
+#               USING DELTA 
+#               PARTITIONED BY (Year)
+#               COMMENT "Partition Year - zorder "
+#               AS (
+#                  SELECT *
+#                  FROM {database}.FLIGHTS_RAW
+#                  ORDER BY Month, DayofMonth
+#                  )'''.format(database=database)
+#          )
 
 # COMMAND ----------
 
@@ -110,30 +139,21 @@ display(df_filtered)
 
 # COMMAND ----------
 
-df_filtered.write.format("delta") \
-  .mode("overwrite") \
-  .option("overwriteSchema", "true") \
-  .saveAsTable(database+".FLIGHTS_RAW")
+spark.sql('''OPTIMIZE {database}.FLIGHTS ZORDER BY (Month, Origin)'''.format(database=database))
+spark.sql('''OPTIMIZE {database}.airports ZORDER BY iata'''.format(database=database))
+spark.sql('''OPTIMIZE {database}.carriers ZORDER BY code'''.format(database=database))
+spark.sql('''OPTIMIZE {database}.planes ZORDER BY tailnum'''.format(database=database))
 
 # COMMAND ----------
 
-spark.sql('''
-              CREATE TABLE IF NOT EXISTS {database}.FLIGHT_GOLD
-              USING DELTA 
-              PARTITIONED BY (Year)
-              COMMENT "Partition Year - zorder "
-              AS (
-                 SELECT *
-                 FROM {database}.FLIGHTS_RAW
-                 ORDER BY Month, DayofMonth
-                 )'''.format(database=database)
-         )
+spark.sql('''ANALYZE TABLE {database}.FLIGHTS COMPUTE STATISTICS FOR All COLUMNS'''.format(database=database))
+spark.sql('''ANALYZE TABLE {database}.airports COMPUTE STATISTICS FOR All COLUMNS'''.format(database=database))
+spark.sql('''ANALYZE TABLE {database}.carriers COMPUTE STATISTICS FOR All COLUMNS'''.format(database=database))
+spark.sql('''ANALYZE TABLE {database}.planes COMPUTE STATISTICS FOR All COLUMNS'''.format(database=database))
 
 # COMMAND ----------
 
-display(spark.sql('''OPTIMIZE {database}.FLIGHT_GOLD ZORDER BY (Month, Origin)'''.format(database=database)))
-#spark.sql('''OPTIMIZE {database}.airports'''.format(database=database))
-#spark.sql('''OPTIMIZE {database}.carriers'''.format(database=database))
+
 
 # COMMAND ----------
 
@@ -144,7 +164,7 @@ display(spark.sql('''OPTIMIZE {database}.FLIGHT_GOLD ZORDER BY (Month, Origin)''
 # MAGIC     sum(1) as nb_fligts,
 # MAGIC     (sum(cancelled) / sum(1)) * 100 as percent_cancelled,
 # MAGIC     RANK () OVER ( ORDER BY (sum(cancelled) / sum(1)) * 100 DESC ) as canceled_rank
-# MAGIC   from flights_db.FLIGHT_GOLD
+# MAGIC   from flights_db.FLIGHTS
 # MAGIC   group by year, UniqueCarrier
 # MAGIC )
 # MAGIC SELECT year, UniqueCarrier, nb_cancelled, percent_cancelled, canceled_rank
@@ -153,26 +173,7 @@ display(spark.sql('''OPTIMIZE {database}.FLIGHT_GOLD ZORDER BY (Month, Origin)''
 
 # COMMAND ----------
 
-from pyspark.sql.functions import *
-flight_df = spark.sql("select * from flights_db.FLIGHT_GOLD where year = 1992")
 
-cancelled_routes_all = flight_df\
-  .filter("CANCELLED == 1")\
-  .withColumn("combo_hash", hash(col("ORIGIN"))+hash(col("DEST")))\
-  .withColumn("combo", concat(col("ORIGIN"),col("DEST")))\
-  .groupby("combo_hash")\
-  .agg(count("combo_hash").alias("count"),first("combo").alias("route_alias"))\
-  .sort("count",ascending=False)  
-
-display(cancelled_routes_all)
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-display(all_routes)
 
 # COMMAND ----------
 
@@ -193,40 +194,6 @@ display(all_routes)
 # MAGIC     ) ;
 # MAGIC     
 # MAGIC DESCRIBE EXTENDED MATTHIEU.flights_96 
-
-# COMMAND ----------
-
-# MAGIC %sql 
-# MAGIC select * 
-# MAGIC from MATTHIEU.FLIGHTS_96
-# MAGIC where year = 1998
-# MAGIC limit 100
-
-# COMMAND ----------
-
-# MAGIC %sql 
-# MAGIC select * 
-# MAGIC from MATTHIEU.FLIGHT_GOLD
-# MAGIC where year = 1998
-# MAGIC limit 100
-
-# COMMAND ----------
-
-# MAGIC %fs
-# MAGIC ls Users/matthieu.lamairesse@databricks.com/flights_db/
-
-# COMMAND ----------
-
-# MAGIC %fs 
-# MAGIC ls dbfs:/Users/matthieu.lamairesse@databricks.com/flights_db/flight_gold/
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC CREATE TABLE flights_db.TEST 
-# MAGIC 
-# MAGIC AS (
-# MAGIC SELECT * FROM delta.`dbfs:/Users/matthieu.lamairesse@databricks.com/flights_db/flight_gold/`)
 
 # COMMAND ----------
 
