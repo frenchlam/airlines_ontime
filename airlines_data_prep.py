@@ -4,7 +4,6 @@
 
 # COMMAND ----------
 
-# Databricks notebook source
 current_user = dbutils.notebook.entry_point.getDbutils().notebook().getContext().tags().apply('user')
 
 #catalog = "hive_metastore"
@@ -61,7 +60,7 @@ dbutils.fs.ls("dbfs:/Users/matthieu.lamairesse@databricks.com/")
 # COMMAND ----------
 
 # Download locations
-url_dict = {'airports.csv':'http://stat-computing.org/dataexpo/2009/airports.csv',
+url_dict = {'airports.csv':'https://raw.githubusercontent.com/frenchlam/airlines_ontime/main/Data/airports.csv',
              'carriers.csv':'http://stat-computing.org/dataexpo/2009/carriers.csv',
              'plane-data.csv':'http://stat-computing.org/dataexpo/2009/plane-data.csv'}
 
