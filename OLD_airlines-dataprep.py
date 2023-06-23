@@ -8,8 +8,7 @@ print(current_user)
 # COMMAND ----------
 
 url_dict = {'airports.csv':'http://stat-computing.org/dataexpo/2009/airports.csv',
-             'carriers.csv':'http://stat-computing.org/dataexpo/2009/carriers.csv',
-             'plane-data.csv':'http://stat-computing.org/dataexpo/2009/plane-data.csv'}
+             'airlines.csv':'https://raw.githubusercontent.com/frenchlam/airlines_ontime/main/Data/airlines.csv'}
 
 path = "/tmp/airlines_data/"
 
@@ -84,11 +83,6 @@ df = initial_df.union(remaining_df)
 df.createOrReplaceTempView("flights")
 
 display(initial_df)
-
-# COMMAND ----------
-
-# MAGIC %sql 
-# MAGIC DROP TABLE flights_db.flights ; 
 
 # COMMAND ----------
 
@@ -186,7 +180,7 @@ spark.sql('''ANALYZE TABLE {database}.planes COMPUTE STATISTICS FOR All COLUMNS'
 
 # MAGIC %sql
 # MAGIC DROP VIEW IF EXISTS MATTHIEU.FLIGHTS_96 ;
-# MAGIC 
+# MAGIC
 # MAGIC CREATE VIEW MATTHIEU.FLIGHTS_96
 # MAGIC as (SELECT * 
 # MAGIC     FROM MATTHIEU.FLIGHT_GOLD
