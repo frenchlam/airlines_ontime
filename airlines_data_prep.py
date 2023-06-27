@@ -199,7 +199,7 @@ df.write.format("delta") \
   .mode("overwrite") \
   .option("overwriteSchema", "true") \
   .option("delta.tuneFileSizesForRewrites", "true") \
-  .option("delta.enableChangeDataFeed, true")\
+  .option("delta.enableChangeDataFeed", "true")\
   .saveAsTable(f"{catalog}.{database}.FLIGHT_optim_zorder")
 
 # COMMAND ----------
