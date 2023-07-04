@@ -6,8 +6,8 @@
 
 current_user = dbutils.notebook.entry_point.getDbutils().notebook().getContext().tags().apply('user')
 
-#catalog = "hive_metastore"
-catalog = "matthieu_lamairesse"
+catalog = "hive_metastore"
+#catalog = "matthieu_lamairesse"
 database = "flights_perf"
 print(current_user)
 
