@@ -1,0 +1,744 @@
+{
+  "queries": [
+    {
+      "id": "901ea86e-4486-449d-af0c-9aa7a8dea54a",
+      "name": "Flights_month",
+      "description": null,
+      "query": "select year, month, UniqueCarrier, b.Description,\n    sum(cancelled) as nb_cancelled,\n    sum(1) as nb_fligts,\n    (sum(cancelled) / sum(1)) * 100 as percent_cancelled\n    --RANK () OVER ( PARTITION BY month ORDER BY (sum(cancelled) / sum(1)) * 100 DESC ) as canceled_rank\nfrom flights_perf.flight_optim_zorder a join flights_perf.airlines b on a.UniqueCarrier = b.UniqueCode\nwhere year = {{year}} and isnotnull(year)\nand a.UniqueCarrier in (\n  with worse_five as (\n    select year, UniqueCarrier, \n          (sum(cancelled) / sum(1)) * 100 as percent_cancelled ,  \n          RANK () OVER ( PARTITION BY year ORDER BY (sum(cancelled) / sum(1)) * 100 DESC ) as canceled_rank\n    from flights_perf.flight_optim_zorder a join flights_perf.airlines b on a.UniqueCarrier = b.UniqueCode\n    where year = {{year}}\n    group by 1,2\n    QUALIFY canceled_rank <=5 )\n  select UniqueCarrier from worse_five\n)\n\ngroup by 1,2,3,4\n",
+      "options": {
+        "parent": "folders/3790251356648289",
+        "run_as_role": "viewer",
+        "apply_auto_limit": true,
+        "folder_node_status": "ACTIVE",
+        "folder_node_internal_name": "tree/3223104499226057",
+        "visualization_control_order": [
+          "year"
+        ],
+        "parameters": [
+          {
+            "queryId": "1b46a1cb-a443-4dd8-81e4-a94cc4152ced",
+            "title": "year",
+            "name": "year",
+            "type": "query",
+            "global": false,
+            "parentQueryId": "901ea86e-4486-449d-af0c-9aa7a8dea54a",
+            "locals": [],
+            "urlPrefix": "p_",
+            "value": "1991",
+            "$$value": "1991"
+          }
+        ],
+        "schema": "flights_perf",
+        "catalog": "hive_metastore"
+      },
+      "visualizations": [
+        {
+          "id": "1d7b607a-5c0a-4e4c-8e9c-3ea4a4e80d06",
+          "type": "CHART",
+          "name": "Heatmap 1",
+          "description": "",
+          "options": {
+            "version": 2,
+            "globalSeriesType": "heatmap",
+            "sortX": true,
+            "sortY": true,
+            "legend": {
+              "traceorder": "normal"
+            },
+            "xAxis": {
+              "type": "-",
+              "labels": {
+                "enabled": true
+              }
+            },
+            "yAxis": [
+              {
+                "type": "-"
+              },
+              {
+                "type": "-",
+                "opposite": true
+              }
+            ],
+            "alignYAxesAtZero": true,
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "series": {
+              "stacking": null,
+              "error_y": {
+                "type": "data",
+                "visible": true
+              }
+            },
+            "seriesOptions": {
+              "column_23feaa8152833": {
+                "yAxis": 0,
+                "type": "heatmap"
+              },
+              "column_23feaa8155527": {
+                "yAxis": 0,
+                "type": "heatmap"
+              }
+            },
+            "valuesOptions": {},
+            "direction": {
+              "type": "counterclockwise"
+            },
+            "sizemode": "diameter",
+            "coefficient": 1,
+            "numberFormat": "0,0[.]00000",
+            "percentFormat": "0[.]00%",
+            "textFormat": "",
+            "missingValuesAsZero": true,
+            "useAggregationsUi": true,
+            "swappedAxes": false,
+            "dateTimeFormat": "YYYY-MM-DD HH:mm",
+            "showDataLabels": false,
+            "columnConfigurationMap": {
+              "x": {
+                "column": "UniqueCarrier",
+                "id": "column_23feaa8155349"
+              },
+              "y": [
+                {
+                  "column": "month",
+                  "id": "column_23feaa8155527"
+                }
+              ],
+              "zVal": {
+                "id": "column_23feaa8152835",
+                "column": "percent_cancelled",
+                "transform": "SUM"
+              }
+            },
+            "isAggregationOn": true,
+            "condensed": true,
+            "withRowNumber": true
+          },
+          "query_plan": {
+            "selects": [
+              {
+                "column": "UniqueCarrier"
+              },
+              {
+                "column": "month"
+              },
+              {
+                "function": "SUM",
+                "args": [
+                  {
+                    "column": "percent_cancelled"
+                  }
+                ],
+                "alias": "column_23feaa8152835"
+              }
+            ],
+            "groups": [
+              {
+                "column": "UniqueCarrier"
+              },
+              {
+                "column": "month"
+              }
+            ]
+          }
+        },
+        {
+          "id": "2a59036a-c4ea-48fc-ab20-6da0e0bd7b5e",
+          "type": "TABLE",
+          "name": "Results",
+          "description": "",
+          "options": {
+            "version": 2
+          },
+          "query_plan": null
+        }
+      ]
+    },
+    {
+      "id": "a5207885-4989-4a2e-97fc-00d71b808794",
+      "name": "flight_count_year",
+      "description": null,
+      "query": "select count(*)\nfrom flight_optim_zorder\nwhere year = {{year}}",
+      "options": {
+        "parent": "folders/3790251356648289",
+        "apply_auto_limit": true,
+        "folder_node_status": "ACTIVE",
+        "folder_node_internal_name": "tree/3223104499226058",
+        "parameters": [
+          {
+            "queryId": "1b46a1cb-a443-4dd8-81e4-a94cc4152ced",
+            "title": "year",
+            "name": "year",
+            "type": "query",
+            "global": false,
+            "locals": [],
+            "urlPrefix": "p_",
+            "value": "1991",
+            "$$value": "1991"
+          }
+        ],
+        "schema": "flights_perf",
+        "catalog": "hive_metastore"
+      },
+      "visualizations": [
+        {
+          "id": "25e363eb-e24e-4550-9b83-8812ed541b64",
+          "type": "COUNTER",
+          "name": "Counter_year",
+          "description": "",
+          "options": {
+            "counterLabel": "number rows for the year",
+            "counterColName": "count(1)",
+            "rowNumber": 1,
+            "targetRowNumber": 1,
+            "stringDecimal": 0,
+            "stringDecChar": ".",
+            "stringThouSep": ",",
+            "tooltipFormat": "0,0.000",
+            "targetColName": "",
+            "formatTargetValue": false
+          },
+          "query_plan": null
+        },
+        {
+          "id": "462a39cb-1d20-4b07-aff3-df0c498d2208",
+          "type": "TABLE",
+          "name": "Results",
+          "description": "",
+          "options": {
+            "version": 2
+          },
+          "query_plan": null
+        }
+      ]
+    },
+    {
+      "id": "84b0b91c-b6bd-4296-9980-66e4b7b8d93f",
+      "name": "Flights_Cancelled",
+      "description": null,
+      "query": "with cancelled_origin as (\n  select year, UniqueCarrier, b.Description,\n    sum(cancelled) as nb_cancelled,\n    sum(1) as nb_fligts,\n    (sum(cancelled) / sum(1)) * 100 as percent_cancelled,\n    RANK () OVER ( PARTITION BY year ORDER BY (sum(cancelled) / sum(1)) * 100 DESC ) as canceled_rank\n  from flights_perf.flight_optim_zorder a join flights_perf.airlines b on a.UniqueCarrier = b.UniqueCode\n  where year = {{year}}\n  group by 1,2,3\n)\nSELECT year, UniqueCarrier, concat( canceled_rank, \"_\", UniqueCarrier ) as rank_airline,  \n      Description, nb_cancelled, percent_cancelled, canceled_rank\nFROM cancelled_origin\nwhere canceled_rank <= 5\norder by nb_cancelled desc",
+      "options": {
+        "parent": "folders/3790251356648289",
+        "run_as_role": "viewer",
+        "apply_auto_limit": true,
+        "folder_node_status": "ACTIVE",
+        "folder_node_internal_name": "tree/3223104499226059",
+        "visualization_control_order": [
+          "year"
+        ],
+        "parameters": [
+          {
+            "queryId": "1b46a1cb-a443-4dd8-81e4-a94cc4152ced",
+            "title": "year",
+            "name": "year",
+            "type": "query",
+            "global": false,
+            "parentQueryId": "84b0b91c-b6bd-4296-9980-66e4b7b8d93f",
+            "locals": [],
+            "urlPrefix": "p_",
+            "multiValuesOptions": null,
+            "value": "1991",
+            "$$value": "1991"
+          }
+        ],
+        "schema": null,
+        "catalog": null
+      },
+      "visualizations": [
+        {
+          "id": "8b0b2a9f-bd4a-4c8c-b08d-1439a85f05f4",
+          "type": "CHART",
+          "name": "Cancelled_rank",
+          "description": "",
+          "options": {
+            "version": 2,
+            "globalSeriesType": "combo",
+            "sortX": true,
+            "sortY": true,
+            "legend": {
+              "traceorder": "normal"
+            },
+            "xAxis": {
+              "type": "-",
+              "labels": {
+                "enabled": true
+              }
+            },
+            "yAxis": [
+              {
+                "type": "-"
+              },
+              {
+                "type": "-",
+                "opposite": true
+              }
+            ],
+            "alignYAxesAtZero": true,
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "series": {
+              "stacking": null,
+              "error_y": {
+                "type": "data",
+                "visible": true
+              }
+            },
+            "seriesOptions": {
+              "column_23feaa8137739": {
+                "yAxis": 0,
+                "type": "column"
+              },
+              "column_23feaa8144379": {
+                "yAxis": 1,
+                "type": "line"
+              }
+            },
+            "valuesOptions": {},
+            "direction": {
+              "type": "counterclockwise"
+            },
+            "sizemode": "diameter",
+            "coefficient": 1,
+            "numberFormat": "0,0[.]00000",
+            "percentFormat": "0[.]00%",
+            "textFormat": "",
+            "missingValuesAsZero": true,
+            "useAggregationsUi": true,
+            "swappedAxes": false,
+            "dateTimeFormat": "YYYY-MM-DD HH:mm",
+            "showDataLabels": true,
+            "numBins": 10,
+            "columnConfigurationMap": {
+              "x": {
+                "column": "rank_airline",
+                "id": "column_23feaa8144220"
+              },
+              "y": [
+                {
+                  "id": "column_23feaa8137739",
+                  "column": "nb_cancelled",
+                  "transform": "SUM"
+                },
+                {
+                  "id": "column_23feaa8144379",
+                  "column": "percent_cancelled",
+                  "transform": "SUM"
+                }
+              ]
+            },
+            "isAggregationOn": true,
+            "condensed": true,
+            "withRowNumber": true
+          },
+          "query_plan": {
+            "selects": [
+              {
+                "column": "rank_airline"
+              },
+              {
+                "function": "SUM",
+                "args": [
+                  {
+                    "column": "nb_cancelled"
+                  }
+                ],
+                "alias": "column_23feaa8137739"
+              },
+              {
+                "function": "SUM",
+                "args": [
+                  {
+                    "column": "percent_cancelled"
+                  }
+                ],
+                "alias": "column_23feaa8144379"
+              }
+            ],
+            "groups": [
+              {
+                "column": "rank_airline"
+              }
+            ]
+          }
+        },
+        {
+          "id": "9b3f6713-93cd-4805-b738-563efab13d1d",
+          "type": "TABLE",
+          "name": "Results",
+          "description": "",
+          "options": {
+            "version": 2
+          },
+          "query_plan": null
+        }
+      ]
+    },
+    {
+      "id": "1b46a1cb-a443-4dd8-81e4-a94cc4152ced",
+      "name": "Flight_year",
+      "description": null,
+      "query": "select distinct `year`\nfrom flight_optim_zorder\nwhere isnotnull(year)\norder by `year` asc",
+      "options": {
+        "parent": "folders/3790251356648289",
+        "apply_auto_limit": true,
+        "folder_node_status": "ACTIVE",
+        "folder_node_internal_name": "tree/3223104499226056",
+        "parameters": [],
+        "schema": "flights_perf",
+        "catalog": "hive_metastore"
+      },
+      "visualizations": [
+        {
+          "id": "40d6b0cf-e78b-47a4-9a7a-27f4950c1411",
+          "type": "TABLE",
+          "name": "Results",
+          "description": "",
+          "options": {
+            "version": 2
+          },
+          "query_plan": null
+        }
+      ]
+    },
+    {
+      "id": "6c929b6a-c790-4324-b47e-4a2bbf7b3b84",
+      "name": "Flight_count",
+      "description": null,
+      "query": "select count(*)\nfrom flight_optim_zorder",
+      "options": {
+        "parent": "folders/3790251356648289",
+        "apply_auto_limit": true,
+        "folder_node_status": "ACTIVE",
+        "folder_node_internal_name": "tree/3223104499226055",
+        "parameters": [],
+        "schema": "flights_perf",
+        "catalog": "hive_metastore"
+      },
+      "visualizations": [
+        {
+          "id": "b9f11638-a718-4c67-beb4-abf700ee1d14",
+          "type": "TABLE",
+          "name": "Results",
+          "description": "",
+          "options": {
+            "version": 2
+          },
+          "query_plan": null
+        },
+        {
+          "id": "f3644ffd-dd6c-450d-843b-105e2fa35b4b",
+          "type": "COUNTER",
+          "name": "Counter 1",
+          "description": "",
+          "options": {
+            "counterLabel": "Total lines in the fact table",
+            "counterColName": "count(1)",
+            "rowNumber": 1,
+            "targetRowNumber": 1,
+            "stringDecimal": 0,
+            "stringDecChar": ".",
+            "stringThouSep": ",",
+            "tooltipFormat": "0,0.000"
+          },
+          "query_plan": null
+        }
+      ]
+    },
+    {
+      "id": "9fcd3a9b-0985-4a75-91fd-8462470a39c4",
+      "name": "Flight_Origins",
+      "description": null,
+      "query": "select year, a.Origin, b.name, b.lat, b.lon,\n    sum(cancelled) as nb_cancelled,\n    sum(1) as nb_fligts,\n    (sum(cancelled) / sum(1)) * 100 as percent_cancelled,\n    RANK () OVER ( PARTITION BY year ORDER BY (sum(cancelled) / sum(1)) * 100 DESC ) as canceled_rank\nfrom flights_perf.flight_optim_zorder a join flights_perf.airports b on a.Origin = b.iata\nwhere year = {{year}} and isnotnull(year)\ngroup by 1,2,3,4,5\nQUALIFY canceled_rank <=10\n",
+      "options": {
+        "parent": "folders/3790251356648289",
+        "run_as_role": "viewer",
+        "apply_auto_limit": true,
+        "folder_node_status": "ACTIVE",
+        "folder_node_internal_name": "tree/3223104499226060",
+        "visualization_control_order": [
+          "year"
+        ],
+        "parameters": [
+          {
+            "queryId": "1b46a1cb-a443-4dd8-81e4-a94cc4152ced",
+            "title": "year",
+            "name": "year",
+            "type": "query",
+            "global": false,
+            "parentQueryId": "9fcd3a9b-0985-4a75-91fd-8462470a39c4",
+            "locals": [],
+            "urlPrefix": "p_",
+            "value": "1991",
+            "$$value": "1991"
+          }
+        ],
+        "schema": "flights_perf",
+        "catalog": "hive_metastore"
+      },
+      "visualizations": [
+        {
+          "id": "0fa636ed-6e78-4ef4-9c08-06a618a6f1c4",
+          "type": "MAP",
+          "name": "Map_worst_airports",
+          "description": "",
+          "options": {
+            "latColName": "lat",
+            "lonColName": "lon",
+            "groups": {},
+            "mapTileUrl": "//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "clusterMarkers": false,
+            "customizeMarkers": false,
+            "iconShape": "marker",
+            "iconFont": "circle",
+            "foregroundColor": "#ffffff",
+            "backgroundColor": "#356AFF",
+            "borderColor": "#356AFF",
+            "bounds": {
+              "_southWest": {
+                "lat": 24.05569221029196,
+                "lng": -142.22739636001333
+              },
+              "_northEast": {
+                "lat": 61.401556450746575,
+                "lng": -66.81724011001333
+              }
+            },
+            "tooltip": {
+              "enabled": true,
+              "template": ""
+            },
+            "popup": {
+              "enabled": true,
+              "template": ""
+            },
+            "condensed": true,
+            "withRowNumber": true,
+            "showPlotlyControls": true
+          },
+          "query_plan": null
+        },
+        {
+          "id": "de956744-1414-471f-bcf4-8b6f5be7c324",
+          "type": "TABLE",
+          "name": "Results",
+          "description": "",
+          "options": {
+            "version": 2
+          },
+          "query_plan": null
+        }
+      ]
+    }
+  ],
+  "dashboard": {
+    "id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+    "name": "Flight_Dashboards",
+    "widgets": [
+      {
+        "id": "0769b50b-1522-401d-a0da-7d35809b4184",
+        "width": 1,
+        "options": {
+          "parameterMappings": {
+            "year": {
+              "name": "year",
+              "type": "dashboard-level",
+              "mapTo": "year",
+              "value": null,
+              "title": ""
+            }
+          },
+          "title": "Map_worst_airports - Flight_Origins",
+          "description": "",
+          "isHidden": false,
+          "position": {
+            "autoHeight": false,
+            "sizeX": 6,
+            "sizeY": 12,
+            "minSizeX": 2,
+            "maxSizeX": 6,
+            "minSizeY": 1,
+            "maxSizeY": 1000,
+            "col": 0,
+            "row": 15
+          }
+        },
+        "dashboard_id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+        "text": "",
+        "visualization_id": "0fa636ed-6e78-4ef4-9c08-06a618a6f1c4"
+      },
+      {
+        "id": "12f2675b-63cc-4ba0-aaa9-c84b95fa27e0",
+        "width": 1,
+        "options": {
+          "parameterMappings": {
+            "year": {
+              "name": "year",
+              "type": "dashboard-level",
+              "mapTo": "year",
+              "value": null,
+              "title": ""
+            }
+          },
+          "title": "Counter_year - flight_count_year",
+          "description": "",
+          "isHidden": false,
+          "position": {
+            "autoHeight": false,
+            "sizeX": 3,
+            "sizeY": 3,
+            "minSizeX": 1,
+            "maxSizeX": 6,
+            "minSizeY": 1,
+            "maxSizeY": 1000,
+            "col": 3,
+            "row": 0
+          }
+        },
+        "dashboard_id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+        "text": "",
+        "visualization_id": "25e363eb-e24e-4550-9b83-8812ed541b64"
+      },
+      {
+        "id": "1cda5cb1-fd50-45ca-8d7a-44b12d03d586",
+        "width": 1,
+        "options": {
+          "isHidden": false,
+          "position": {
+            "autoHeight": false,
+            "sizeX": 6,
+            "sizeY": 2,
+            "minSizeX": 1,
+            "maxSizeX": 6,
+            "minSizeY": 1,
+            "maxSizeY": 1000,
+            "col": 0,
+            "row": 3
+          },
+          "parameterMappings": {}
+        },
+        "dashboard_id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+        "text": "## Airlines with most Cancelations"
+      },
+      {
+        "id": "1f275028-8d31-4d2f-aaaf-2e9cf1c0ca68",
+        "width": 1,
+        "options": {
+          "parameterMappings": {
+            "year": {
+              "name": "year",
+              "type": "dashboard-level",
+              "mapTo": "year",
+              "value": null,
+              "title": ""
+            }
+          },
+          "title": "Heatmap 1 - Flights_month",
+          "description": "",
+          "isHidden": false,
+          "position": {
+            "autoHeight": false,
+            "sizeX": 3,
+            "sizeY": 8,
+            "minSizeX": 1,
+            "maxSizeX": 6,
+            "minSizeY": 5,
+            "maxSizeY": 1000,
+            "col": 3,
+            "row": 5
+          }
+        },
+        "dashboard_id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+        "text": "",
+        "visualization_id": "1d7b607a-5c0a-4e4c-8e9c-3ea4a4e80d06"
+      },
+      {
+        "id": "5b8c98f7-9286-4fb3-b959-7e0a013c5f53",
+        "width": 1,
+        "options": {
+          "parameterMappings": {
+            "year": {
+              "name": "year",
+              "type": "dashboard-level",
+              "mapTo": "year",
+              "value": null,
+              "title": ""
+            }
+          },
+          "title": "Flights_Cancelled - Worst 5 airlines ",
+          "description": "",
+          "isHidden": false,
+          "position": {
+            "autoHeight": false,
+            "sizeX": 3,
+            "sizeY": 8,
+            "minSizeX": 1,
+            "maxSizeX": 6,
+            "minSizeY": 5,
+            "maxSizeY": 1000,
+            "col": 0,
+            "row": 5
+          },
+          "overrideColors": false
+        },
+        "dashboard_id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+        "text": "",
+        "visualization_id": "8b0b2a9f-bd4a-4c8c-b08d-1439a85f05f4"
+      },
+      {
+        "id": "a4d852de-256a-45e7-99ec-80c9554e276e",
+        "width": 1,
+        "options": {
+          "parameterMappings": {},
+          "title": "Counter 1 - Flight_count",
+          "description": "",
+          "isHidden": false,
+          "position": {
+            "autoHeight": false,
+            "sizeX": 3,
+            "sizeY": 3,
+            "minSizeX": 1,
+            "maxSizeX": 6,
+            "minSizeY": 1,
+            "maxSizeY": 1000,
+            "col": 0,
+            "row": 0
+          }
+        },
+        "dashboard_id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+        "text": "",
+        "visualization_id": "f3644ffd-dd6c-450d-843b-105e2fa35b4b"
+      },
+      {
+        "id": "b1c24d83-d398-44fb-81d6-853e06d8fabe",
+        "width": 1,
+        "options": {
+          "isHidden": false,
+          "position": {
+            "autoHeight": false,
+            "sizeX": 6,
+            "sizeY": 2,
+            "minSizeX": 1,
+            "maxSizeX": 6,
+            "minSizeY": 1,
+            "maxSizeY": 1000,
+            "col": 0,
+            "row": 13
+          }
+        },
+        "dashboard_id": "59690a14-b7c5-4db5-8b86-2a580c84cd7e",
+        "text": "## Worst Airports to fly from\ntop 10"
+      }
+    ],
+    "tags": [],
+    "color_palette": null,
+    "dashboard_filters_enabled": false,
+    "parent": "folders/3790251356648289",
+    "is_archived": false
+  },
+  "version": "1.0"
+}
