@@ -6,10 +6,15 @@
 
 current_user = dbutils.notebook.entry_point.getDbutils().notebook().getContext().tags().apply('user')
 
-catalog = "hive_metastore"
-#catalog = "matthieu_lamairesse"
+#catalog = "hive_metastore"
+catalog = "matthieu_lamairesse"
 database = "flights_perf"
+external_location = "matthieu_lamairesse" 
 print(current_user)
+sql_statement = f""" 
+                use catalog {catalog};
+                """
+spark.sql(sql_statement)
 
 # COMMAND ----------
 
@@ -108,8 +113,36 @@ spark.sql(f"DROP TABLE IF EXISTS {catalog}.{database}.FLIGHTS_RAW")
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC #### create optimized tables
+
+# COMMAND ----------
+
+initial_df = (spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv("dbfs:/databricks-datasets/airlines/part-00000"))
+df_schema = initial_df.schema
+
+df = (spark.read
+      .option("header", "false")
+      .schema(df_schema)
+      .csv("dbfs:/databricks-datasets/airlines/"))
+
+df.createOrReplaceTempView("flights")
+
+display(df)
+
+# COMMAND ----------
+
+url = spark.sql(f"DESCRIBE EXTERNAL LOCATION {external_location}").toPandas()["url"][0]
+
+df.write.format("csv") \
+  .mode("overwrite") \
+  .save(f"{url}/flights_raw")
+
 sql_create_flight_raw = f"""
-create table IF NOT EXISTS {catalog}.{database}.FLIGHTS_RAW (
+create table IF NOT EXISTS {catalog}.{database}.FLIGHT_RAW (
       Year integer,
       Month integer,
       DayofMonth integer, 
@@ -142,34 +175,10 @@ create table IF NOT EXISTS {catalog}.{database}.FLIGHTS_RAW (
       IsArrDelayed string, 
       IsDepDelayed string )
 USING CSV 
-LOCATION 'dbfs:/databricks-datasets/airlines/'
+LOCATION '{url}/flights_raw'
 OPTIONS ('header' = TRUE )
 """
-#spark.sql(sql_create_flight_raw)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC #### create optimized tables
-
-# COMMAND ----------
-
-initial_df = (spark.read
-      .option("header", "true")
-      .option("inferSchema", "true")
-      .csv("dbfs:/databricks-datasets/airlines/part-00000"))
-df_schema = initial_df.schema
-
-df = (spark.read
-      .option("header", "false")
-      .schema(df_schema)
-      .csv("dbfs:/databricks-datasets/airlines/"))
-#      .csv("dbfs:/databricks-datasets/airlines/part-000{0[1-9],[1-9][0-9]}"))
-
-#df = initial_df.union(remaining_df)
-df.createOrReplaceTempView("flights")
-
-display(df)
+spark.sql(sql_create_flight_raw)
 
 # COMMAND ----------
 
@@ -189,7 +198,7 @@ df.write \
   .partitionBy("year") \
   .format("delta") \
   .mode("overwrite") \
-  .option("maxRecordsPerFile", 120000) \
+  .option("maxRecordsPerFile", 60000) \
   .option("overwriteSchema", "true") \
   .saveAsTable(f"{catalog}.{database}.FLIGHT_partitioned")
 
